@@ -1191,7 +1191,10 @@ Status DBImpl::Delete(const WriteOptions& options, const Slice& key) {
   return DB::Delete(options, key);
 }
 
-// 1 写入log 文件
+/* 1 写入log 文件
+  
+*/
+
 Status DBImpl::Write(const WriteOptions& options, WriteBatch* my_batch) {
   Writer w(&mutex_);
   w.batch = my_batch;
@@ -1342,7 +1345,7 @@ Status DBImpl::MakeRoomForWrite(bool force) {
       allow_delay = false;  // Do not delay a single write more than once
       mutex_.Lock();
     } else if (!force &&
-               (mem_->ApproximateMemoryUsage() <= options_.write_buffer_size)) { //当memtable 占用内存小于一定值
+               (mem_->ApproximateMemoryUsage() <= options_.write_buffer_size)) { //当memtable 占用内存小于一定值(4mb),不用
       // There is room in current memtable
       break;
     } else if (imm_ != NULL) {

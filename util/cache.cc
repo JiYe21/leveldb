@@ -39,11 +39,12 @@ namespace {
 
 // An entry is a variable length heap-allocated structure.  Entries
 // are kept in a circular doubly linked list ordered by access time.
+//item
 struct LRUHandle {
   void* value;
   void (*deleter)(const Slice&, void* value);
-  LRUHandle* next_hash;
-  LRUHandle* next;
+  LRUHandle* next_hash;//用于实现hash
+  LRUHandle* next;//实现链表
   LRUHandle* prev;
   size_t charge;      // TODO(opt): Only allow uint32_t?
   size_t key_length;
@@ -81,8 +82,8 @@ class HandleTable {
     LRUHandle** ptr = FindPointer(h->key(), h->hash);
     LRUHandle* old = *ptr;
     h->next_hash = (old == NULL ? NULL : old->next_hash);
-    *ptr = h;
-    if (old == NULL) {
+    *ptr = h;//ptr是h prev 节点 next 元素地址
+    if (old == NULL) { //插入的元素不存在
       ++elems_;
       if (elems_ > length_) {
         // Since each cache entry is fairly large, we aim for a small
@@ -106,15 +107,16 @@ class HandleTable {
  private:
   // The table consists of an array of buckets where each bucket is
   // a linked list of cache entries that hash into the bucket.
-  uint32_t length_;
-  uint32_t elems_;
-  LRUHandle** list_;
+  uint32_t length_;//数组长度
+  uint32_t elems_;//元素个数
+  LRUHandle** list_;//链表指针数组
 
   // Return a pointer to slot that points to a cache entry that
   // matches key/hash.  If there is no such cache entry, return a
   // pointer to the trailing slot in the corresponding linked list.
+  //查找key
   LRUHandle** FindPointer(const Slice& key, uint32_t hash) {
-    LRUHandle** ptr = &list_[hash & (length_ - 1)];
+    LRUHandle** ptr = &list_[hash & (length_ - 1)];//key hash 不同的元素也可能落到同一slot上
     while (*ptr != NULL &&
            ((*ptr)->hash != hash || key != (*ptr)->key())) {
       ptr = &(*ptr)->next_hash;
@@ -124,7 +126,7 @@ class HandleTable {
 
   void Resize() {
     uint32_t new_length = 4;
-    while (new_length < elems_) {
+    while (new_length < elems_) { //确保length_<elems<2*length_
       new_length *= 2;
     }
     LRUHandle** new_list = new LRUHandle*[new_length];
@@ -132,7 +134,7 @@ class HandleTable {
     uint32_t count = 0;
     for (uint32_t i = 0; i < length_; i++) {
       LRUHandle* h = list_[i];
-      while (h != NULL) {
+      while (h != NULL) {//头部插入
         LRUHandle* next = h->next_hash;
         uint32_t hash = h->hash;
         LRUHandle** ptr = &new_list[hash & (new_length - 1)];

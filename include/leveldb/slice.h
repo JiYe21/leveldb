@@ -21,7 +21,7 @@
 #include <string>
 
 namespace leveldb {
-
+//¿‡À∆std::string  «≥øΩ±¥
 class Slice {
  public:
   // Create an empty slice.

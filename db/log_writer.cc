@@ -31,7 +31,7 @@ Writer::Writer(WritableFile* dest, uint64_t dest_length)
 }
 
 Writer::~Writer() {
-}
+} 
 
 Status Writer::AddRecord(const Slice& slice) {
   const char* ptr = slice.data();

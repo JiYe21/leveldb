@@ -15,7 +15,7 @@ const char* Status::CopyState(const char* state) {
   memcpy(result, state, size + 5);
   return result;
 }
-
+// msg ºÍmsg2  format [msg: msg2]
 Status::Status(Code code, const Slice& msg, const Slice& msg2) {
   assert(code != kOk);
   const uint32_t len1 = msg.size();

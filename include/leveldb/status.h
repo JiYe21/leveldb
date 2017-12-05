@@ -17,7 +17,7 @@
 #include "leveldb/slice.h"
 
 namespace leveldb {
-
+//存储状态码和具体状态信息  
 class Status {
  public:
   // Create a success status.
