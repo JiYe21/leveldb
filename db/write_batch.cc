@@ -24,7 +24,11 @@
 namespace leveldb {
 
 // WriteBatch header has an 8-byte sequence number followed by a 4-byte count.
-//头部固定12字节
+//头部固定12字节 
+//rep_[0..8] seq number
+//rep_[8..11] batch中key-value 对数
+//body rep_[12]  kTypeValue标识，标明该key是否删除
+// 4byte key length | key data | 4byte value length | value data
 static const size_t kHeader = 12;
 
 WriteBatch::WriteBatch() {
