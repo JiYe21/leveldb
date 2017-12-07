@@ -33,6 +33,9 @@ Writer::Writer(WritableFile* dest, uint64_t dest_length)
 Writer::~Writer() {
 } 
 
+//每个kBlockSize 大小为32k,每个slice放入block中 如果能全部放入则为kFullType类型
+//如果只能放入一个部分，则为kFirstType，剩下部分再放入另外一个block,如果该block不能放下，则该部分为kMiddleType，
+//剩下部分放入另外一个block，如果全部放下，则为kLastType
 Status Writer::AddRecord(const Slice& slice) {
   const char* ptr = slice.data();
   size_t left = slice.size();

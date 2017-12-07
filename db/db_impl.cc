@@ -1194,7 +1194,8 @@ Status DBImpl::Delete(const WriteOptions& options, const Slice& key) {
 /* 1 写入log 文件
   
 */
-
+// 1 将队列中batch合并 一次写入log文件
+//  2 写入memtable
 Status DBImpl::Write(const WriteOptions& options, WriteBatch* my_batch) {
   Writer w(&mutex_);
   w.batch = my_batch;
@@ -1203,10 +1204,11 @@ Status DBImpl::Write(const WriteOptions& options, WriteBatch* my_batch) {
 
   MutexLock l(&mutex_);
   writers_.push_back(&w);
+  // 由writes_队列中首batch(线程)处理
   while (!w.done && &w != writers_.front()) {
     w.cv.Wait();
   }
-  if (w.done) {
+  if (w.done) {//batch已经被处理
     return w.status;
   }
 
@@ -1215,7 +1217,7 @@ Status DBImpl::Write(const WriteOptions& options, WriteBatch* my_batch) {
   uint64_t last_sequence = versions_->LastSequence();
   Writer* last_writer = &w;
   if (status.ok() && my_batch != NULL) {  // NULL batch is for compactions
-    WriteBatch* updates = BuildBatchGroup(&last_writer);
+    WriteBatch* updates = BuildBatchGroup(&last_writer);//将writes_中batch合并
     WriteBatchInternal::SetSequence(updates, last_sequence + 1);
     last_sequence += WriteBatchInternal::Count(updates);
 
@@ -1224,8 +1226,8 @@ Status DBImpl::Write(const WriteOptions& options, WriteBatch* my_batch) {
     // and protects against concurrent loggers and concurrent writes
     // into mem_.
     {
-      mutex_.Unlock();
-      status = log_->AddRecord(WriteBatchInternal::Contents(updates));
+      mutex_.Unlock();//解锁后一个线程写入log和memtable过程中其他线程可以往writes_中写入batch
+      status = log_->AddRecord(WriteBatchInternal::Contents(updates));//将合并后的batch写入log文件
       bool sync_error = false;
       if (status.ok() && options.sync) {
         status = logfile_->Sync();
@@ -1234,7 +1236,7 @@ Status DBImpl::Write(const WriteOptions& options, WriteBatch* my_batch) {
         }
       }
       if (status.ok()) {
-        status = WriteBatchInternal::InsertInto(updates, mem_);
+        status = WriteBatchInternal::InsertInto(updates, mem_);//加入MemTable中
       }
       mutex_.Lock();
       if (sync_error) {
@@ -1249,6 +1251,7 @@ Status DBImpl::Write(const WriteOptions& options, WriteBatch* my_batch) {
     versions_->SetLastSequence(last_sequence);
   }
 
+//ready到 last_write间batch都已合并
   while (true) {
     Writer* ready = writers_.front();
     writers_.pop_front();
@@ -1259,7 +1262,7 @@ Status DBImpl::Write(const WriteOptions& options, WriteBatch* my_batch) {
     }
     if (ready == last_writer) break;
   }
-
+//last_write后如果还有batch，激活线程
   // Notify new head of write queue
   if (!writers_.empty()) {
     writers_.front()->cv.Signal();
