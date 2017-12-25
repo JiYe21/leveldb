@@ -85,8 +85,10 @@ void MemTable::Add(SequenceNumber s, ValueType type,
   // Format of an entry is concatenation of:
   //  key_size     : varint32 of internal_key.size()
   //  key bytes    : char[internal_key.size()]
+  //  encode type  : varint64 of seq<<8 | type
   //  value_size   : varint32 of value.size()
   //  value bytes  : char[value.size()]
+  // key| encode|value
   size_t key_size = key.size();
   size_t val_size = value.size();
   size_t internal_key_size = key_size + 8;

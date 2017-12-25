@@ -198,6 +198,8 @@ class SequentialFile {
 };
 
 // A file abstraction for randomly reading the contents of a file.
+
+//从一个文件(只读)中读取size数据，这个是base class,其默认实现为PosixMmapReadableFile
 class RandomAccessFile {
  public:
   RandomAccessFile() { }

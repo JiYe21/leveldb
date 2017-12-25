@@ -53,7 +53,7 @@ Status WriteBatch::Iterate(Handler* handler) const {
   input.remove_prefix(kHeader);
   Slice key, value;
   int found = 0;
-  while (!input.empty()) {
+  while (!input.empty()) {//经过合并后的batch中有 多个key value 对，遍历item,通过handler基类处理，而handler实质是MemTableInserter
     found++;
     char tag = input[0];
     input.remove_prefix(1);

@@ -141,7 +141,7 @@ class DBImpl : public DB {
   MemTable* imm_;                // Memtable being compacted
   port::AtomicPointer has_imm_;  // So bg thread can detect non-NULL imm_
   WritableFile* logfile_;
-  uint64_t logfile_number_;
+  uint64_t logfile_number_;//记录当前log文件
   log::Writer* log_;
   uint32_t seed_;                // For sampling.
 
@@ -153,7 +153,7 @@ class DBImpl : public DB {
 
   // Set of table files to protect from deletion because they are
   // part of ongoing compactions.
-  std::set<uint64_t> pending_outputs_;
+  std::set<uint64_t> pending_outputs_;//记录正在写入ldb文件序号
 
   // Has a background compaction been scheduled or is running?
   bool bg_compaction_scheduled_;

@@ -339,7 +339,7 @@ static const int kNumShards = 1 << kNumShardBits;
 
 class ShardedLRUCache : public Cache {
  private:
-  LRUCache shard_[kNumShards];
+  LRUCache shard_[kNumShards];//用lrucache数组提高效率
   port::Mutex id_mutex_;
   uint64_t last_id_;
 

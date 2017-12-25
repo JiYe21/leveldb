@@ -22,7 +22,7 @@ namespace leveldb {
 class BlockBuilder;
 class BlockHandle;
 class WritableFile;
-
+//≥÷æ√ªØmemtableµΩ¥≈≈Ã
 class TableBuilder {
  public:
   // Create a builder that will store the contents of the table it is

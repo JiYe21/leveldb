@@ -13,7 +13,7 @@
 #include "leveldb/iterator.h"
 
 namespace leveldb {
-
+//从memtable中构建ldb文件，当memtable中数据超过4m,将数据保存至文件中
 Status BuildTable(const std::string& dbname,
                   Env* env,
                   const Options& options,

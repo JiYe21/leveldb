@@ -21,9 +21,9 @@ struct TableBuilder::Rep {
   Options options;
   Options index_block_options;
   WritableFile* file;
-  uint64_t offset;
+  uint64_t offset;//记录写入file中size
   Status status;
-  BlockBuilder data_block;
+  BlockBuilder data_block;//记录所有key-value
   BlockBuilder index_block;
   std::string last_key;
   int64_t num_entries;
@@ -115,7 +115,7 @@ void TableBuilder::Add(const Slice& key, const Slice& value) {
   r->data_block.Add(key, value);
 
   const size_t estimated_block_size = r->data_block.CurrentSizeEstimate();
-  if (estimated_block_size >= r->options.block_size) {
+  if (estimated_block_size >= r->options.block_size) {//当data_block 大小超过options.block_size(4k)则写入ldb文件，文件结构为(data+type+crc)
     Flush();
   }
 }

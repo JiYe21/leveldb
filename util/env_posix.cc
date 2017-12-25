@@ -174,6 +174,7 @@ class PosixRandomAccessFile: public RandomAccessFile {
 };
 
 // mmap() based random-access
+//从内存中读取数据
 class PosixMmapReadableFile: public RandomAccessFile {
  private:
   std::string filename_;

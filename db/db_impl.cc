@@ -95,7 +95,7 @@ Options SanitizeOptions(const std::string& dbname,
   result.comparator = icmp;
   result.filter_policy = (src.filter_policy != NULL) ? ipolicy : NULL;
   ClipToRange(&result.max_open_files,    64 + kNumNonTableCacheFiles, 50000);
-  ClipToRange(&result.write_buffer_size, 64<<10,                      1<<30);
+  ClipToRange(&result.write_buffer_size, 64<<10,                      1<<30);//write buffer大小64k~~1g
   ClipToRange(&result.max_file_size,     1<<20,                       1<<30);
   ClipToRange(&result.block_size,        1<<10,                       4<<20);
   if (result.info_log == NULL) {
@@ -173,7 +173,8 @@ DBImpl::~DBImpl() {
     delete options_.block_cache;
   }
 }
-
+//创建manifest CURRENT文件
+// CURRENT指向manifest
 Status DBImpl::NewDB() {
   VersionEdit new_db;
   new_db.SetComparatorName(user_comparator()->Name());
@@ -279,7 +280,7 @@ Status DBImpl::Recover(VersionEdit* edit, bool *save_manifest) {
   // may already exist from a previous failed creation attempt.
   env_->CreateDir(dbname_);
   assert(db_lock_ == NULL);
-  Status s = env_->LockFile(LockFileName(dbname_), &db_lock_);
+  Status s = env_->LockFile(LockFileName(dbname_), &db_lock_);//加锁
   if (!s.ok()) {
     return s;
   }
@@ -1516,7 +1517,7 @@ Status DB::Open(const Options& options, const std::string& dbname,
       edit.SetLogNumber(new_log_number);
       impl->logfile_ = lfile;
       impl->logfile_number_ = new_log_number;
-      impl->log_ = new log::Writer(lfile);
+      impl->log_ = new log::Writer(lfile); //log::Writer对 WritableFile抽象类进行包装
       impl->mem_ = new MemTable(impl->internal_comparator_);
       impl->mem_->Ref();
     }
