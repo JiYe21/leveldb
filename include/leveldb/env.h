@@ -167,6 +167,7 @@ class Env {
 };
 
 // A file abstraction for reading sequentially through a file
+// 顺序读文件基类
 class SequentialFile {
  public:
   SequentialFile() { }
@@ -200,6 +201,7 @@ class SequentialFile {
 // A file abstraction for randomly reading the contents of a file.
 
 //从一个文件(只读)中读取size数据，这个是base class,其默认实现为PosixMmapReadableFile
+// 随机只读实现
 class RandomAccessFile {
  public:
   RandomAccessFile() { }
@@ -226,6 +228,7 @@ class RandomAccessFile {
 // A file abstraction for sequential writing.  The implementation
 // must provide buffering since callers may append small fragments
 // at a time to the file.
+// 可写文件基类
 class WritableFile {
  public:
   WritableFile() { }
@@ -275,7 +278,7 @@ extern void Log(Logger* info_log, const char* format, ...)
     __attribute__((__format__ (__printf__, 2, 3)))
 #   endif
     ;
-
+//提供两个读写文件接口
 // A utility routine: write "data" to the named file.
 extern Status WriteStringToFile(Env* env, const Slice& data,
                                 const std::string& fname);

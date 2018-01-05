@@ -16,7 +16,7 @@ namespace leveldb {
 class SequentialFile;
 
 namespace log {
-
+//与Writer类相关
 class Reader {
  public:
   // Interface for reporting errors.
@@ -68,10 +68,10 @@ class Reader {
   // Offset of the last record returned by ReadRecord.
   uint64_t last_record_offset_;
   // Offset of the first location past the end of buffer_.
-  uint64_t end_of_buffer_offset_;
+  uint64_t end_of_buffer_offset_;//record记录结束位置
 
   // Offset at which to start looking for the first record to return
-  uint64_t const initial_offset_;
+  uint64_t const initial_offset_;//record记录起始位置
 
   // True if we are resynchronizing after a seek (initial_offset_ > 0). In
   // particular, a run of kMiddleType and kLastType records can be silently

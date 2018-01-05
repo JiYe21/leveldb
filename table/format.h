@@ -19,6 +19,7 @@ struct ReadOptions;
 
 // BlockHandle is a pointer to the extent of a file that stores a data
 // block or a meta block.
+//指向block(记录block文件位置及大小),文件中实现指针方法
 class BlockHandle {
  public:
   BlockHandle();
@@ -84,7 +85,7 @@ static const uint64_t kTableMagicNumber = 0xdb4775248b80fb57ull;
 static const size_t kBlockTrailerSize = 5;
 
 struct BlockContents {
-  Slice data;           // Actual contents of data
+  Slice data;           // Actual contents of data //指向data index block
   bool cachable;        // True iff data can be cached
   bool heap_allocated;  // True iff caller should delete[] data.data()
 };

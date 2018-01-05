@@ -173,8 +173,8 @@ DBImpl::~DBImpl() {
     delete options_.block_cache;
   }
 }
-//创建manifest CURRENT文件
-// CURRENT指向manifest
+//  1 创建manifest CURRENT文件
+// 2 CURRENT指向manifest
 Status DBImpl::NewDB() {
   VersionEdit new_db;
   new_db.SetComparatorName(user_comparator()->Name());
@@ -189,6 +189,7 @@ Status DBImpl::NewDB() {
     return s;
   }
   {
+  	//manifest文件 先按VersionEdit编码 再按log类格式写入
     log::Writer log(file);
     std::string record;
     new_db.EncodeTo(&record);
@@ -235,9 +236,9 @@ void DBImpl::DeleteObsoleteFiles() {
     if (ParseFileName(filenames[i], &number, &type)) {
       bool keep = true;
       switch (type) {
-        case kLogFile:
-          keep = ((number >= versions_->LogNumber()) ||
-                  (number == versions_->PrevLogNumber()));
+        case kLogFile://delete log 文件
+          keep = ((number >= versions_->LogNumber()) ||   //LogNumber当前lognumber，即小于当前lognumber都会被删除
+                  (number == versions_->PrevLogNumber()));//PrevLogNumber 默认设为0
           break;
         case kDescriptorFile:
           // Keep my manifest file, and any newer incarnations'
@@ -271,7 +272,10 @@ void DBImpl::DeleteObsoleteFiles() {
     }
   }
 }
-
+/*
+ * 1 从manifest恢复数据至versionset
+ * 2 从log恢复数据至 memtable
+*/
 Status DBImpl::Recover(VersionEdit* edit, bool *save_manifest) {
   mutex_.AssertHeld();
 
@@ -284,7 +288,7 @@ Status DBImpl::Recover(VersionEdit* edit, bool *save_manifest) {
   if (!s.ok()) {
     return s;
   }
-
+//如果db 不存在，则创建
   if (!env_->FileExists(CurrentFileName(dbname_))) {
     if (options_.create_if_missing) {
       s = NewDB();
@@ -322,7 +326,7 @@ Status DBImpl::Recover(VersionEdit* edit, bool *save_manifest) {
   if (!s.ok()) {
     return s;
   }
-  std::set<uint64_t> expected;
+  std::set<uint64_t> expected;//理论应有的文件
   versions_->AddLiveFiles(&expected);
   uint64_t number;
   FileType type;
@@ -334,7 +338,7 @@ Status DBImpl::Recover(VersionEdit* edit, bool *save_manifest) {
         logs.push_back(number);
     }
   }
-  if (!expected.empty()) {
+  if (!expected.empty()) {//实际缺省的文件
     char buf[50];
     snprintf(buf, sizeof(buf), "%d missing files; e.g.",
              static_cast<int>(expected.size()));
@@ -362,7 +366,9 @@ Status DBImpl::Recover(VersionEdit* edit, bool *save_manifest) {
 
   return Status::OK();
 }
-
+/*
+ * 1 从log文件中恢复数据到memtable中
+*/
 Status DBImpl::RecoverLogFile(uint64_t log_number, bool last_log,
                               bool* save_manifest, VersionEdit* edit,
                               SequenceNumber* max_sequence) {
@@ -522,7 +528,7 @@ Status DBImpl::WriteLevel0Table(MemTable* mem, VersionEdit* edit,
       level = base->PickLevelForMemTableOutput(min_user_key, max_user_key);
     }
     edit->AddFile(level, meta.number, meta.file_size,
-                  meta.smallest, meta.largest);
+                  meta.smallest, meta.largest);//记录ldb文件信息
   }
 
   CompactionStats stats;
@@ -532,6 +538,11 @@ Status DBImpl::WriteLevel0Table(MemTable* mem, VersionEdit* edit,
   return s;
 }
 
+
+/* 1 将memtable 数据写入ldb文件
+ * 2 更新manifest文件
+ * 3 删除以前log
+*/
 void DBImpl::CompactMemTable() {
   mutex_.AssertHeld();
   assert(imm_ != NULL);
@@ -551,7 +562,7 @@ void DBImpl::CompactMemTable() {
   if (s.ok()) {
     edit.SetPrevLogNumber(0);
     edit.SetLogNumber(logfile_number_);  // Earlier logs no longer needed
-    s = versions_->LogAndApply(&edit, &mutex_);
+    s = versions_->LogAndApply(&edit, &mutex_);//更新manifest记录
   }
 
   if (s.ok()) {
@@ -559,7 +570,7 @@ void DBImpl::CompactMemTable() {
     imm_->Unref();
     imm_ = NULL;
     has_imm_.Release_Store(NULL);
-    DeleteObsoleteFiles();
+    DeleteObsoleteFiles();//删除记录memtable log文件，memtable 已写入ldb，log文件无用
   } else {
     RecordBackgroundError(s);
   }
@@ -1131,6 +1142,7 @@ Status DBImpl::Get(const ReadOptions& options,
 
   // Unlock while reading from files and memtables
   {
+  //依次从mem imm versionset中查找
     mutex_.Unlock();
     // First look in the memtable, then in the immutable memtable (if any).
     LookupKey lkey(key, snapshot);

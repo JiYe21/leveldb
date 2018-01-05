@@ -129,13 +129,13 @@ class Version {
                           void* arg,
                           bool (*func)(void*, int, FileMetaData*));
 
-  VersionSet* vset_;            // VersionSet to which this Version belongs
+  VersionSet* vset_;            // VersionSet to which this Version belongs //每个version持有versionSet
   Version* next_;               // Next version in linked list
   Version* prev_;               // Previous version in linked list
   int refs_;                    // Number of live refs to this version
 
   // List of files per level
-  std::vector<FileMetaData*> files_[config::kNumLevels];
+  std::vector<FileMetaData*> files_[config::kNumLevels];//记录每层的文件
 
   // Next file to compact based on seek stats.
   FileMetaData* file_to_compact_;
@@ -308,7 +308,7 @@ class VersionSet {
   // Opened lazily
   WritableFile* descriptor_file_;
   log::Writer* descriptor_log_;
-  Version dummy_versions_;  // Head of circular doubly-linked list of versions.
+  Version dummy_versions_;  // Head of circular doubly-linked list of versions. //记录所有version
   Version* current_;        // == dummy_versions_.prev_
 
   // Per-level key at which the next compaction at that level should start.

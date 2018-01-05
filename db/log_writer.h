@@ -16,6 +16,7 @@ class WritableFile;
 
 namespace log {
 
+//通过该类写入 log文件，与具体应用log相关，属于应用层，而WritableFile是通用write基类
 class Writer {
  public:
   // Create a writer that will append data to "*dest".

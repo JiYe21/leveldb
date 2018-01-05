@@ -13,7 +13,7 @@
 namespace leveldb {
 
 class VersionSet;
-
+//记录ldb文件数据
 struct FileMetaData {
   int refs;
   int allowed_seeks;          // Seeks allowed until compaction
@@ -25,6 +25,7 @@ struct FileMetaData {
   FileMetaData() : refs(0), allowed_seeks(1 << 30), file_size(0) { }
 };
 
+//通过该类编码manifest文件
 class VersionEdit {
  public:
   VersionEdit() { Clear(); }

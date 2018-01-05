@@ -355,6 +355,7 @@ Status Version::Get(const ReadOptions& options,
     // Get the list of files to search in this level
     FileMetaData* const* files = &files_[level][0];
     if (level == 0) {
+		//level0中可能多个文件中含有同一key,将文件序号降序排列
       // Level-0 files may overlap each other.  Find all files that
       // overlap user_key and process them in order from newest to oldest.
       tmp.reserve(num_files);
@@ -619,13 +620,13 @@ class VersionSet::Builder {
 
   typedef std::set<FileMetaData*, BySmallestKey> FileSet;
   struct LevelState {
-    std::set<uint64_t> deleted_files;
-    FileSet* added_files;
+    std::set<uint64_t> deleted_files;//每层待删除文件
+    FileSet* added_files;//每层保留文件
   };
 
   VersionSet* vset_;
   Version* base_;
-  LevelState levels_[config::kNumLevels];
+  LevelState levels_[config::kNumLevels];//记录每层文件状态
 
  public:
   // Initialize a builder with the files from *base and other info from *vset
@@ -662,6 +663,7 @@ class VersionSet::Builder {
   }
 
   // Apply all of the edits in *edit to the current state.
+  // 添加edit 信息
   void Apply(VersionEdit* edit) {
     // Update compaction pointers
     for (size_t i = 0; i < edit->compact_pointers_.size(); i++) {
@@ -901,7 +903,11 @@ Status VersionSet::LogAndApply(VersionEdit* edit, port::Mutex* mu) {
 
   return s;
 }
-
+/*
+ * 1 读取CURRENT 文件，从中获取当前manifest文件
+ * 2 读manifest文件，初始化version_set,将文件信息(FileMetaData)存到builder
+ * 3 通过builder构建version,存储每层可用文件
+*/
 Status VersionSet::Recover(bool *save_manifest) {
   struct LogReporter : public log::Reader::Reporter {
     Status* status;
@@ -911,6 +917,7 @@ Status VersionSet::Recover(bool *save_manifest) {
   };
 
   // Read "CURRENT" file, which contains a pointer to the current manifest file
+  //读取CURRENT文件
   std::string current;
   Status s = ReadFileToString(env_, CurrentFileName(dbname_), &current);
   if (!s.ok()) {
@@ -923,7 +930,7 @@ Status VersionSet::Recover(bool *save_manifest) {
 
   std::string dscname = dbname_ + "/" + current;
   SequentialFile* file;
-  s = env_->NewSequentialFile(dscname, &file);
+  s = env_->NewSequentialFile(dscname, &file);//打开当前manifest
   if (!s.ok()) {
     return s;
   }
@@ -957,7 +964,7 @@ Status VersionSet::Recover(bool *save_manifest) {
       }
 
       if (s.ok()) {
-        builder.Apply(&edit);
+        builder.Apply(&edit);//将edit 文件信息存到builder
       }
 
       if (edit.has_log_number_) {
@@ -1003,7 +1010,7 @@ Status VersionSet::Recover(bool *save_manifest) {
 
   if (s.ok()) {
     Version* v = new Version(this);
-    builder.SaveTo(v);
+    builder.SaveTo(v);//构建version
     // Install recovered version
     Finalize(v);
     AppendVersion(v);

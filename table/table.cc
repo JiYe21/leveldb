@@ -32,7 +32,7 @@ struct Table::Rep {
   const char* filter_data;
 
   BlockHandle metaindex_handle;  // Handle to metaindex_block: saved from footer
-  Block* index_block;
+  Block* index_block; //指向data index block
 };
 
 Status Table::Open(const Options& options,
@@ -53,7 +53,7 @@ Status Table::Open(const Options& options,
   Footer footer;
   s = footer.DecodeFrom(&footer_input);
   if (!s.ok()) return s;
-
+//获取data index block
   // Read the index block
   BlockContents contents;
   Block* index_block = NULL;

@@ -16,7 +16,10 @@
 #include "util/crc32c.h"
 
 namespace leveldb {
+//table由block组成，block由block_restart_interval(16)组成，文件先按大小切割，再按key-value数量切割
+// 提高查找效率
 
+//通过Rep构建table
 struct TableBuilder::Rep {
   Options options;
   Options index_block_options;
@@ -40,7 +43,7 @@ struct TableBuilder::Rep {
   //
   // Invariant: r->pending_index_entry is true only if data_block is empty.
   bool pending_index_entry;
-  BlockHandle pending_handle;  // Handle to add to index block
+  BlockHandle pending_handle;  // Handle to add to index block //用于构建index_block 记录data_block 偏移和大小
 
   std::string compressed_output;
 
@@ -102,7 +105,7 @@ void TableBuilder::Add(const Slice& key, const Slice& value) {
     r->options.comparator->FindShortestSeparator(&r->last_key, key);
     std::string handle_encoding;
     r->pending_handle.EncodeTo(&handle_encoding);
-    r->index_block.Add(r->last_key, Slice(handle_encoding));
+    r->index_block.Add(r->last_key, Slice(handle_encoding));//记录last_key 和offset size,用与构建index_block
     r->pending_index_entry = false;
   }
 
@@ -136,6 +139,7 @@ void TableBuilder::Flush() {
   }
 }
 
+//将block写入文件
 void TableBuilder::WriteBlock(BlockBuilder* block, BlockHandle* handle) {
   // File format contains a sequence of blocks where each block has:
   //    block_data: uint8[n]
@@ -143,7 +147,7 @@ void TableBuilder::WriteBlock(BlockBuilder* block, BlockHandle* handle) {
   //    crc: uint32
   assert(ok());
   Rep* r = rep_;
-  Slice raw = block->Finish();
+  Slice raw = block->Finish(); //记录block 重启点
 
   Slice block_contents;
   CompressionType type = r->options.compression;

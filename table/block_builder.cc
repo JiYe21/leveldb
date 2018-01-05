@@ -72,7 +72,7 @@ Slice BlockBuilder::Finish() {
 /* 1 last_key_ :上次添加的key
 ** 2 <shared><non_shared><value_size><key_not_shared_data><value_data> 
 ** 每次添加key时与上次key对比，如果与上次key起始部分有重复，如:hello helloworld 有5个重复，再次添加只需添加剩余部分key(world)
-** 3 restarts_ 每添加block_restart_interval(16) key-value，就记录buffer长度
+** 3 restarts_ 每添加block_restart_interval(16) key-value，就记录偏移起始点
 */
 
 void BlockBuilder::Add(const Slice& key, const Slice& value) {
