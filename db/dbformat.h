@@ -13,7 +13,7 @@
 #include "leveldb/table_builder.h"
 #include "util/coding.h"
 #include "util/logging.h"
-
+//对internal keys 提供3中封装形式
 namespace leveldb {
 
 // Grouping of constants.  We may want to make some of these
@@ -66,7 +66,10 @@ typedef uint64_t SequenceNumber;
 // can be packed together into 64-bits.
 static const SequenceNumber kMaxSequenceNumber =
     ((0x1ull << 56) - 1);
+//该结构包装InternalKey
 
+//  对internal keys 提供两种形式实现 c和c++ 
+//  形式 : user_key|7byte sequence|type
 struct ParsedInternalKey {
   Slice user_key;
   SequenceNumber sequence;
@@ -77,13 +80,14 @@ struct ParsedInternalKey {
       : user_key(u), sequence(seq), type(t) { }
   std::string DebugString() const;
 };
-
+// 1 InternalKey解析接口
 // Return the length of the encoding of "key".
 inline size_t InternalKeyEncodingLength(const ParsedInternalKey& key) {
   return key.user_key.size() + 8;
 }
 
 // Append the serialization of "key" to *result.
+//序列化至result
 extern void AppendInternalKey(std::string* result,
                               const ParsedInternalKey& key);
 
@@ -91,6 +95,7 @@ extern void AppendInternalKey(std::string* result,
 // stores the parsed data in "*result", and returns true.
 //
 // On error, returns false, leaves "*result" in an undefined state.
+//从internal_key反序列化至result
 extern bool ParseInternalKey(const Slice& internal_key,
                              ParsedInternalKey* result);
 
@@ -141,6 +146,7 @@ class InternalFilterPolicy : public FilterPolicy {
 // Modules in this directory should keep internal keys wrapped inside
 // the following class instead of plain strings so that we do not
 // incorrectly use string comparisons instead of an InternalKeyComparator.
+//internal keys  class形式 
 class InternalKey {
  private:
   std::string rep_;
@@ -186,6 +192,9 @@ inline bool ParseInternalKey(const Slice& internal_key,
 }
 
 // A helper class useful for DBImpl::Get()
+
+// 形式: varint32 length| user_key|fixed64 tag  相当于对internal keys 另一个封装
+
 class LookupKey {
  public:
   // Initialize *this for looking up user_key at a snapshot with

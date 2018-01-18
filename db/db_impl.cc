@@ -98,6 +98,7 @@ Options SanitizeOptions(const std::string& dbname,
   ClipToRange(&result.write_buffer_size, 64<<10,                      1<<30);//write buffer大小64k~~1g
   ClipToRange(&result.max_file_size,     1<<20,                       1<<30);
   ClipToRange(&result.block_size,        1<<10,                       4<<20);
+  //如果没有指定log管理器,则使用系统默认的log
   if (result.info_log == NULL) {
     // Open a log file in the same directory as the db
     src.env->CreateDir(dbname);  // In case it does not exist
@@ -108,6 +109,7 @@ Options SanitizeOptions(const std::string& dbname,
       result.info_log = NULL;
     }
   }
+  //如果没有指定cache管理器,则使用系统默认的cache
   if (result.block_cache == NULL) {
     result.block_cache = NewLRUCache(8 << 20);
   }
@@ -139,7 +141,7 @@ DBImpl::DBImpl(const Options& raw_options, const std::string& dbname)
 
   // Reserve ten files or so for other uses and give the rest to TableCache.
   const int table_cache_size = options_.max_open_files - kNumNonTableCacheFiles;
-  table_cache_ = new TableCache(dbname_, &options_, table_cache_size);
+  table_cache_ = new TableCache(dbname_, &options_, table_cache_size);//管理所有sstable
 
   versions_ = new VersionSet(dbname_, &options_, table_cache_,
                              &internal_comparator_);
@@ -288,10 +290,11 @@ Status DBImpl::Recover(VersionEdit* edit, bool *save_manifest) {
   if (!s.ok()) {
     return s;
   }
-//如果db 不存在，则创建
+  // 1 如果db不存在，就创建db
+//如果CURRENT 不存在，则创建
   if (!env_->FileExists(CurrentFileName(dbname_))) {
     if (options_.create_if_missing) {
-      s = NewDB();
+      s = NewDB();//初始化db
       if (!s.ok()) {
         return s;
       }
@@ -506,6 +509,7 @@ Status DBImpl::WriteLevel0Table(MemTable* mem, VersionEdit* edit,
   Status s;
   {
     mutex_.Unlock();
+	//创建.sst文件，并将其相关信息记录在meta中 
     s = BuildTable(dbname_, env_, options_, table_cache_, iter, &meta);
     mutex_.Lock();
   }
@@ -525,7 +529,7 @@ Status DBImpl::WriteLevel0Table(MemTable* mem, VersionEdit* edit,
     const Slice min_user_key = meta.smallest.user_key();
     const Slice max_user_key = meta.largest.user_key();
     if (base != NULL) {
-      level = base->PickLevelForMemTableOutput(min_user_key, max_user_key);
+      level = base->PickLevelForMemTableOutput(min_user_key, max_user_key);//为合并的输出文件选择合适的level
     }
     edit->AddFile(level, meta.number, meta.file_size,
                   meta.smallest, meta.largest);//记录ldb文件信息
@@ -728,6 +732,8 @@ void DBImpl::BackgroundCompaction() {
     // Nothing to do
   } else if (!is_manual && c->IsTrivialMove()) {
     // Move file to next level
+    ////如果不是主动触发的，并且level中的输入文件与level+1中无重叠，且与level + 2中重叠不大于
+    // kTargetFileSize,直接将文件移到level+1中
     assert(c->num_input_files(0) == 1);
     FileMetaData* f = c->input(0, 0);
     c->edit()->DeleteFile(c->level(), f->number);

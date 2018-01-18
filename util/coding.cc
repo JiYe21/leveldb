@@ -109,6 +109,7 @@ int VarintLength(uint64_t v) {
   return len;
 }
 
+//p 指向varint32内存，从varint32低地址向高地址遍历，每次解析一个byte,当byte第八位为1，则下一字节数据有效，否则结束解析
 const char* GetVarint32PtrFallback(const char* p,
                                    const char* limit,
                                    uint32_t* value) {

@@ -105,7 +105,7 @@ class SkipList {
 
   // Modified only by Insert().  Read racily by readers, but stale
   // values are ok.
-  port::AtomicPointer max_height_;   // Height of the entire list
+  port::AtomicPointer max_height_;   // Height of the entire list   //记录list高度
 
   inline int GetMaxHeight() const {
     return static_cast<int>(
@@ -157,6 +157,7 @@ struct SkipList<Key,Comparator>::Node {
     // version of the returned Node.
     return reinterpret_cast<Node*>(next_[n].Acquire_Load());
   }
+  //设置当前节点第n层的next节点为x
   void SetNext(int n, Node* x) {
     assert(n >= 0);
     // Use a 'release store' so that anybody who reads through this
@@ -176,9 +177,10 @@ struct SkipList<Key,Comparator>::Node {
 
  private:
   // Array of length equal to the node height.  next_[0] is lowest level link.
-  port::AtomicPointer next_[1];
+  port::AtomicPointer next_[1];//指针数组,数组长度为node高度，指向next node
 };
 
+//根据高度分配一块内存，在这块内存初始化node
 template<typename Key, class Comparator>
 typename SkipList<Key,Comparator>::Node*
 SkipList<Key,Comparator>::NewNode(const Key& key, int height) {
@@ -258,6 +260,7 @@ bool SkipList<Key,Comparator>::KeyIsAfterNode(const Key& key, Node* n) const {
   return (n != NULL) && (compare_(n->key, key) < 0);
 }
 
+//找到一个大于或者等于key的node
 template<typename Key, class Comparator>
 typename SkipList<Key,Comparator>::Node* SkipList<Key,Comparator>::FindGreaterOrEqual(const Key& key, Node** prev)
     const {
@@ -265,7 +268,7 @@ typename SkipList<Key,Comparator>::Node* SkipList<Key,Comparator>::FindGreaterOr
   int level = GetMaxHeight() - 1;
   while (true) {
     Node* next = x->Next(level);
-    if (KeyIsAfterNode(key, next)) {
+    if (KeyIsAfterNode(key, next)) {//如果key比当层next node 大，则移动到下一节点，否则移动到一层(level--)
       // Keep searching in this list
       x = next;
     } else {
@@ -321,6 +324,7 @@ typename SkipList<Key,Comparator>::Node* SkipList<Key,Comparator>::FindLast()
   }
 }
 
+//初始化head_ 节点设置最大高度为kMaxHeight(12),并且设置head_每层next node
 template<typename Key, class Comparator>
 SkipList<Key,Comparator>::SkipList(Comparator cmp, Arena* arena)
     : compare_(cmp),
@@ -341,7 +345,7 @@ void SkipList<Key,Comparator>::Insert(const Key& key) {
   Node* x = FindGreaterOrEqual(key, prev);
 
   // Our data structure does not allow duplicate insertion
-  assert(x == NULL || !Equal(key, x->key));
+  assert(x == NULL || !Equal(key, x->key));//不允许两个key相等，实际上两个key不可能相等，因为sequence不同
 
   int height = RandomHeight();
   if (height > GetMaxHeight()) {
@@ -359,7 +363,7 @@ void SkipList<Key,Comparator>::Insert(const Key& key) {
     // keys.  In the latter case the reader will use the new node.
     max_height_.NoBarrier_Store(reinterpret_cast<void*>(height));
   }
-
+//创建一个新节点，设置层次为height
   x = NewNode(key, height);
   for (int i = 0; i < height; i++) {
     // NoBarrier_SetNext() suffices since we will add a barrier when

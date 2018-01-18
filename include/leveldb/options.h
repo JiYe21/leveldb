@@ -65,7 +65,7 @@ struct Options {
   // be written to info_log if it is non-NULL, or to a file stored
   // in the same directory as the DB contents if info_log is NULL.
   // Default: NULL
-  Logger* info_log;
+  Logger* info_log;//log管理器，如果用户初始化没有指定，则使用系统默认的放入db 目录下的log
 
   // -------------------
   // Parameters that affect performance
@@ -95,6 +95,7 @@ struct Options {
   // If non-NULL, use the specified cache for blocks.
   // If NULL, leveldb will automatically create and use an 8MB internal cache.
   // Default: NULL
+  //如果用户没有提供缓存管理器，则使用系统默认的
   Cache* block_cache;
 
   // Approximate size of user data packed per block.  Note that the
