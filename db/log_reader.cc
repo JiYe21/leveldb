@@ -198,10 +198,12 @@ void Reader::ReportDrop(uint64_t bytes, const Status& reason) {
 
 unsigned int Reader::ReadPhysicalRecord(Slice* result) {
   while (true) {
+  //不足完整头部信息，则从文件读取，跟socket类似
     if (buffer_.size() < kHeaderSize) {
       if (!eof_) {
         // Last read was a full read, so this is a trailer to skip
         buffer_.clear();
+		//每次从文件里读取block长度数据
         Status status = file_->Read(kBlockSize, &buffer_, backing_store_);
         end_of_buffer_offset_ += buffer_.size();
         if (!status.ok()) {
@@ -209,7 +211,7 @@ unsigned int Reader::ReadPhysicalRecord(Slice* result) {
           ReportDrop(kBlockSize, status);
           eof_ = true;
           return kEof;
-        } else if (buffer_.size() < kBlockSize) {
+        } else if (buffer_.size() < kBlockSize) {//如果读取的长度小于block,则说明文件读到结尾了，buffer里不足一个block
           eof_ = true;
         }
         continue;
@@ -229,7 +231,7 @@ unsigned int Reader::ReadPhysicalRecord(Slice* result) {
     const uint32_t b = static_cast<uint32_t>(header[5]) & 0xff;
     const unsigned int type = header[6];
     const uint32_t length = a | (b << 8);
-    if (kHeaderSize + length > buffer_.size()) {
+    if (kHeaderSize + length > buffer_.size()) {//文件读完不足一个block才会发生
       size_t drop_size = buffer_.size();
       buffer_.clear();
       if (!eof_) {
@@ -266,7 +268,7 @@ unsigned int Reader::ReadPhysicalRecord(Slice* result) {
       }
     }
 
-    buffer_.remove_prefix(kHeaderSize + length);
+    buffer_.remove_prefix(kHeaderSize + length);//移除完整block
 
     // Skip physical record that started before initial_offset_
     if (end_of_buffer_offset_ - buffer_.size() - kHeaderSize - length <
