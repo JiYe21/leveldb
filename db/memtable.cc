@@ -14,7 +14,7 @@ namespace leveldb {
 static Slice GetLengthPrefixedSlice(const char* data) {
   uint32_t len;
   const char* p = data;
-  p = GetVarint32Ptr(p, p + 5, &len);  // +5: we assume "p" is not corrupted
+  p = GetVarint32Ptr(p, p + 5, &len);  // +5: we assume "p" is not corrupted//获取internalkey的长度和起始地址
   return Slice(p, len);
 }
 
@@ -29,13 +29,13 @@ MemTable::~MemTable() {
 }
 
 size_t MemTable::ApproximateMemoryUsage() { return arena_.MemoryUsage(); }
-
+//InternalKey比较器，比较key|seq|type
 int MemTable::KeyComparator::operator()(const char* aptr, const char* bptr)
     const {
   // Internal keys are encoded as length-prefixed strings.
   Slice a = GetLengthPrefixedSlice(aptr);
   Slice b = GetLengthPrefixedSlice(bptr);
-  return comparator.Compare(a, b);
+  return comparator.Compare(a, b);//InternalKeyComparator.Compare
 }
 
 // Encode a suitable internal key target for "target" and return it.

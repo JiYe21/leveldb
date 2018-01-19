@@ -62,7 +62,8 @@ class MemTable {
 
  private:
   ~MemTable();  // Private since only Unref() should be used to delete it
-
+  
+//skiplist ±È½ÏÆ÷
   struct KeyComparator {
     const InternalKeyComparator comparator;
     explicit KeyComparator(const InternalKeyComparator& c) : comparator(c) { }

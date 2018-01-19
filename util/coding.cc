@@ -94,7 +94,7 @@ void PutVarint64(std::string* dst, uint64_t v) {
   char* ptr = EncodeVarint64(buf, v);
   dst->append(buf, ptr - buf);
 }
-
+//把value 的长度和data追加到dst
 void PutLengthPrefixedSlice(std::string* dst, const Slice& value) {
   PutVarint32(dst, value.size());
   dst->append(value.data(), value.size());
@@ -128,7 +128,8 @@ const char* GetVarint32PtrFallback(const char* p,
   }
   return NULL;
 }
-
+//input: length|value
+// 获取length,并且将input指向新的value起始地址
 bool GetVarint32(Slice* input, uint32_t* value) {
   const char* p = input->data();
   const char* limit = p + input->size();
@@ -179,7 +180,7 @@ const char* GetLengthPrefixedSlice(const char* p, const char* limit,
   *result = Slice(p, len);
   return p + len;
 }
-
+//取出input中value
 bool GetLengthPrefixedSlice(Slice* input, Slice* result) {
   uint32_t len;
   if (GetVarint32(input, &len) &&

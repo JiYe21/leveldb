@@ -46,7 +46,8 @@ std::string InternalKey::DebugString() const {
 const char* InternalKeyComparator::Name() const {
   return "leveldb.InternalKeyComparator";
 }
-
+//InternalKey 比较，用于skiplist
+//相同key  序号按大到小排序
 int InternalKeyComparator::Compare(const Slice& akey, const Slice& bkey) const {
   // Order by:
   //    increasing user key (according to user-supplied comparator)

@@ -115,6 +115,8 @@ inline ValueType ExtractValueType(const Slice& internal_key) {
 
 // A comparator for internal keys that uses a specified comparator for
 // the user key portion and breaks ties by decreasing sequence number.
+
+// Comparator°ü¹üÀà
 class InternalKeyComparator : public Comparator {
  private:
   const Comparator* user_comparator_;
