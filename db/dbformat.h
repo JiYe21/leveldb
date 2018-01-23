@@ -117,6 +117,7 @@ inline ValueType ExtractValueType(const Slice& internal_key) {
 // the user key portion and breaks ties by decreasing sequence number.
 
 // Comparator包裹类
+// 指定了user_key 和internal_key比较方法
 class InternalKeyComparator : public Comparator {
  private:
   const Comparator* user_comparator_;
@@ -130,7 +131,7 @@ class InternalKeyComparator : public Comparator {
   virtual void FindShortSuccessor(std::string* key) const;
 
   const Comparator* user_comparator() const { return user_comparator_; }
-
+//internal_key 的比较方法
   int Compare(const InternalKey& a, const InternalKey& b) const;
 };
 

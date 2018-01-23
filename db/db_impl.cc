@@ -58,6 +58,7 @@ struct DBImpl::CompactionState {
   SequenceNumber smallest_snapshot;
 
   // Files produced by compaction
+  //压缩过程产生的文件
   struct Output {
     uint64_t number;
     uint64_t file_size;
@@ -505,11 +506,13 @@ Status DBImpl::WriteLevel0Table(MemTable* mem, VersionEdit* edit,
   Iterator* iter = mem->NewIterator();
   Log(options_.info_log, "Level-0 table #%llu: started",
       (unsigned long long) meta.number);
-
+/*
+ * 1 将memtable数据写入ldb文件，并将文件加入table中
+*/
   Status s;
   {
     mutex_.Unlock();
-	//创建.sst文件，并将其相关信息记录在meta中 
+	//创建ldb文件，并将其相关信息记录在meta中 
     s = BuildTable(dbname_, env_, options_, table_cache_, iter, &meta);
     mutex_.Lock();
   }
@@ -555,6 +558,9 @@ void DBImpl::CompactMemTable() {
   VersionEdit edit;
   Version* base = versions_->current();
   base->Ref();
+  /*
+  * 1 将memtable 数据写入ldb文件
+  */
   Status s = WriteLevel0Table(imm_, &edit, base);
   base->Unref();
 
@@ -563,6 +569,9 @@ void DBImpl::CompactMemTable() {
   }
 
   // Replace immutable memtable with the generated Table
+  /*
+  * 2 构建新版本
+  */
   if (s.ok()) {
     edit.SetPrevLogNumber(0);
     edit.SetLogNumber(logfile_number_);  // Earlier logs no longer needed
@@ -701,7 +710,9 @@ void DBImpl::BackgroundCall() {
 
 void DBImpl::BackgroundCompaction() {
   mutex_.AssertHeld();
-
+/*
+* 1 将memtable持久化到sstable中，并且创建新版本
+*/
   if (imm_ != NULL) {
     CompactMemTable();
     return;
@@ -736,9 +747,10 @@ void DBImpl::BackgroundCompaction() {
     // kTargetFileSize,直接将文件移到level+1中
     assert(c->num_input_files(0) == 1);
     FileMetaData* f = c->input(0, 0);
-    c->edit()->DeleteFile(c->level(), f->number);
+    c->edit()->DeleteFile(c->level(), f->number);//设置levle层要删除的文件
     c->edit()->AddFile(c->level() + 1, f->number, f->file_size,
                        f->smallest, f->largest);
+	//将文件重新加到versionset中
     status = versions_->LogAndApply(c->edit(), &mutex_);
     if (!status.ok()) {
       RecordBackgroundError(status);
@@ -802,7 +814,7 @@ void DBImpl::CleanupCompaction(CompactionState* compact) {
   }
   delete compact;
 }
-
+//创建sstable文件，持久化压缩后的数据
 Status DBImpl::OpenCompactionOutputFile(CompactionState* compact) {
   assert(compact != NULL);
   assert(compact->builder == NULL);
@@ -1130,6 +1142,8 @@ Status DBImpl::Get(const ReadOptions& options,
   Status s;
   MutexLock l(&mutex_);
   SequenceNumber snapshot;
+  //获取一个序列号。
+  //如果没有指定snapshot，则使用最大序列号。因为一个user_key对应多个 internal_key,查询到的value 是小于snapshot的最大snapshot internal_key对应的value
   if (options.snapshot != NULL) {
     snapshot = reinterpret_cast<const SnapshotImpl*>(options.snapshot)->number_;
   } else {

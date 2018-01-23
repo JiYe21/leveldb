@@ -14,6 +14,8 @@ class SnapshotList;
 
 // Snapshots are kept in a doubly-linked list in the DB.
 // Each SnapshotImpl corresponds to a particular sequence number.
+
+//其实就是记录序列号，方便根据序列号查询指定key对应的value
 class SnapshotImpl : public Snapshot {
  public:
   SequenceNumber number_;  // const after creation

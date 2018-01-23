@@ -372,10 +372,11 @@ class Compaction {
 
   int level_;
   uint64_t max_output_file_size_;
-  Version* input_version_;
+  Version* input_version_;//当前正在压缩的版本
   VersionEdit edit_;
 
   // Each compaction reads inputs from "level_" and "level_+1"
+  //level和level+1被选择压缩的文件
   std::vector<FileMetaData*> inputs_[2];      // The two sets of inputs
 
   // State used to check for number of of overlapping grandparent files
