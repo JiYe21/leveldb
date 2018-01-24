@@ -12,7 +12,8 @@
 #include "port/port.h"
 
 namespace leveldb {
-
+//每次分配一个block 4k,小于1k的内存就从block中取，大于1k的就单独分配
+//该内存池到最终一次性释放内存，不能小片段回收
 class Arena {
  public:
   Arena();
@@ -35,11 +36,11 @@ class Arena {
   char* AllocateNewBlock(size_t block_bytes);
 
   // Allocation state
-  char* alloc_ptr_;
-  size_t alloc_bytes_remaining_;
+  char* alloc_ptr_;//内存池的起始地址
+  size_t alloc_bytes_remaining_;//可利用内存大小
 
   // Array of new[] allocated memory blocks
-  std::vector<char*> blocks_;
+  std::vector<char*> blocks_;//记录分配的内存块
 
   // Total memory usage of the arena.
   port::AtomicPointer memory_usage_;
@@ -54,6 +55,7 @@ inline char* Arena::Allocate(size_t bytes) {
   // 0-byte allocations, so we disallow them here (we don't need
   // them for our internal use).
   assert(bytes > 0);
+  //可利用内存足够，就直接返回
   if (bytes <= alloc_bytes_remaining_) {
     char* result = alloc_ptr_;
     alloc_ptr_ += bytes;

@@ -60,6 +60,7 @@ size_t BlockBuilder::CurrentSizeEstimate() const {
           sizeof(uint32_t));                      // Restart array length
 }
 
+//将重起点信息追加buffer_
 Slice BlockBuilder::Finish() {
   // Append restart array
   for (size_t i = 0; i < restarts_.size(); i++) {
@@ -90,7 +91,7 @@ void BlockBuilder::Add(const Slice& key, const Slice& value) {
     }
   } else {
     // Restart compression
-    restarts_.push_back(buffer_.size());
+    restarts_.push_back(buffer_.size());//记录偏移
     counter_ = 0;
   }
   const size_t non_shared = key.size() - shared;

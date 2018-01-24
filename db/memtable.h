@@ -76,7 +76,7 @@ class MemTable {
 
   KeyComparator comparator_;
   int refs_;
-  Arena arena_;
+  Arena arena_;//memtable 内存池，key所占内存都从这里分配,因为不需要小片段回收，待memtable释放时一次性销毁
   Table table_;
 
   // No copying allowed

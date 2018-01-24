@@ -19,7 +19,7 @@ Arena::~Arena() {
     delete[] blocks_[i];
   }
 }
-
+//如果bytes大于1k则单独分配内存，否则重内存块(4k)中取内存
 char* Arena::AllocateFallback(size_t bytes) {
   if (bytes > kBlockSize / 4) {
     // Object is more than a quarter of our block size.  Allocate it separately

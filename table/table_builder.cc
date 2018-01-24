@@ -26,10 +26,10 @@ struct TableBuilder::Rep {
   WritableFile* file;
   uint64_t offset;//记录写入file中size
   Status status;
-  BlockBuilder data_block;//记录所有key-value
+  BlockBuilder data_block;//用户构建block
   BlockBuilder index_block;
   std::string last_key;
-  int64_t num_entries;
+  int64_t num_entries;//key-value对数
   bool closed;          // Either Finish() or Abandon() has been called.
   FilterBlockBuilder* filter_block;
 
@@ -99,7 +99,7 @@ void TableBuilder::Add(const Slice& key, const Slice& value) {
   if (r->num_entries > 0) {
     assert(r->options.comparator->Compare(key, Slice(r->last_key)) > 0);
   }
-
+//当有一个block已经写入sstbale
   if (r->pending_index_entry) {
     assert(r->data_block.empty());
     r->options.comparator->FindShortestSeparator(&r->last_key, key);
@@ -123,6 +123,7 @@ void TableBuilder::Add(const Slice& key, const Slice& value) {
   }
 }
 
+//将block写入文件
 void TableBuilder::Flush() {
   Rep* r = rep_;
   assert(!r->closed);
@@ -139,7 +140,7 @@ void TableBuilder::Flush() {
   }
 }
 
-//将block写入文件
+
 void TableBuilder::WriteBlock(BlockBuilder* block, BlockHandle* handle) {
   // File format contains a sequence of blocks where each block has:
   //    block_data: uint8[n]
@@ -147,7 +148,7 @@ void TableBuilder::WriteBlock(BlockBuilder* block, BlockHandle* handle) {
   //    crc: uint32
   assert(ok());
   Rep* r = rep_;
-  Slice raw = block->Finish(); //记录block 重启点
+  Slice raw = block->Finish(); //获取block
 
   Slice block_contents;
   CompressionType type = r->options.compression;

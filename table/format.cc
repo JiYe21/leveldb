@@ -11,7 +11,7 @@
 #include "util/crc32c.h"
 
 namespace leveldb {
-
+// varint64 offset | varint64 size_
 void BlockHandle::EncodeTo(std::string* dst) const {
   // Sanity check that all fields have been set
   assert(offset_ != ~static_cast<uint64_t>(0));

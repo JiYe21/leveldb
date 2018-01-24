@@ -11,6 +11,7 @@
 
 namespace leveldb {
 
+//data 是 lookupkey ,从中解析出key
 static Slice GetLengthPrefixedSlice(const char* data) {
   uint32_t len;
   const char* p = data;
@@ -48,6 +49,7 @@ static const char* EncodeKey(std::string* scratch, const Slice& target) {
   return scratch->data();
 }
 
+//memtable 迭代器
 class MemTableIterator: public Iterator {
  public:
   explicit MemTableIterator(MemTable::Table* table) : iter_(table) { }
@@ -58,6 +60,7 @@ class MemTableIterator: public Iterator {
   virtual void SeekToLast() { iter_.SeekToLast(); }
   virtual void Next() { iter_.Next(); }
   virtual void Prev() { iter_.Prev(); }
+  //从skiplist node  key中解析出internal_key 和value
   virtual Slice key() const { return GetLengthPrefixedSlice(iter_.key()); }
   virtual Slice value() const {
     Slice key_slice = GetLengthPrefixedSlice(iter_.key());
@@ -78,7 +81,8 @@ class MemTableIterator: public Iterator {
 Iterator* MemTable::NewIterator() {
   return new MemTableIterator(&table_);
 }
-
+// internal_key size|key_bytes|seq |type|   value_size|value_bytes
+//skiplist中key由internal_key 和value组成
 void MemTable::Add(SequenceNumber s, ValueType type,
                    const Slice& key,
                    const Slice& value) {
@@ -104,7 +108,7 @@ void MemTable::Add(SequenceNumber s, ValueType type,
   p = EncodeVarint32(p, val_size);
   memcpy(p, value.data(), val_size);
   assert((p + val_size) - buf == encoded_len);
-  table_.Insert(buf);
+  table_.Insert(buf);//skiplist中node key是指针
 }
 
 bool MemTable::Get(const LookupKey& key, std::string* value, Status* s) {
