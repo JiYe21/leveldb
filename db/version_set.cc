@@ -260,6 +260,7 @@ enum SaverState {
   kDeleted,
   kCorrupt,
 };
+//存放从sstable查找到key -value
 struct Saver {
   SaverState state;
   const Comparator* ucmp;
@@ -267,6 +268,7 @@ struct Saver {
   std::string* value;
 };
 }
+//从sstable获取到internal_key 和value
 static void SaveValue(void* arg, const Slice& ikey, const Slice& v) {
   Saver* s = reinterpret_cast<Saver*>(arg);
   ParsedInternalKey parsed_key;

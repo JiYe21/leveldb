@@ -341,7 +341,7 @@ class ShardedLRUCache : public Cache {
  private:
   LRUCache shard_[kNumShards];//用lrucache数组提高效率
   port::Mutex id_mutex_;
-  uint64_t last_id_;
+  uint64_t last_id_;//id计数器，可以用于cache 中sstable计数
 
   static inline uint32_t HashSlice(const Slice& s) {
     return Hash(s.data(), s.size(), 0);

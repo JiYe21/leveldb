@@ -16,10 +16,15 @@
 #include "util/crc32c.h"
 
 namespace leveldb {
+	/*
+	* 构建sstable文件
+	*/
+
 //table由block组成，block由block_restart_interval(16)组成，文件先按大小切割，再按key-value数量切割
 // 提高查找效率
 
-//通过Rep构建table
+//通过Rep构建table  
+//TableBuilder作为对用户接口，与version_set 内部的build类似，通过bulid构建version
 struct TableBuilder::Rep {
   Options options;
   Options index_block_options;
@@ -140,7 +145,7 @@ void TableBuilder::Flush() {
   }
 }
 
-
+//写block至文件
 void TableBuilder::WriteBlock(BlockBuilder* block, BlockHandle* handle) {
   // File format contains a sequence of blocks where each block has:
   //    block_data: uint8[n]
@@ -232,6 +237,7 @@ Status TableBuilder::Finish() {
   }
 
   // Write index block
+  //写入data index block,block last_key为key,block offset和size为value
   if (ok()) {
     if (r->pending_index_entry) {
       r->options.comparator->FindShortSuccessor(&r->last_key);
@@ -240,7 +246,7 @@ Status TableBuilder::Finish() {
       r->index_block.Add(r->last_key, Slice(handle_encoding));
       r->pending_index_entry = false;
     }
-    WriteBlock(&r->index_block, &index_block_handle);
+    WriteBlock(&r->index_block, &index_block_handle);//同时获取index_block_handle大小和相对文件偏移量
   }
 
   // Write footer

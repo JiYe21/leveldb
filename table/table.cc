@@ -16,7 +16,11 @@
 #include "util/coding.h"
 
 namespace leveldb {
+/*
+* 解析sstable文件
+*/
 
+//用于解析sstable
 struct Table::Rep {
   ~Rep() {
     delete filter;
@@ -24,10 +28,10 @@ struct Table::Rep {
     delete index_block;
   }
 
-  Options options;
+  Options options;//根据block_cache 以cache_id和offset为key,存储block
   Status status;
-  RandomAccessFile* file;
-  uint64_t cache_id;
+  RandomAccessFile* file;//sstable文件指针，用于随机读取sstable文件
+  uint64_t cache_id;//cache中sstable id
   FilterBlockReader* filter;
   const char* filter_data;
 
@@ -35,6 +39,7 @@ struct Table::Rep {
   Block* index_block; //指向data index block
 };
 
+//打开sstable文件
 Status Table::Open(const Options& options,
                    RandomAccessFile* file,
                    uint64_t size,
@@ -46,6 +51,9 @@ Status Table::Open(const Options& options,
 
   char footer_space[Footer::kEncodedLength];
   Slice footer_input;
+  /*
+  * 1 读取footer，解析data_index_block 和meta_index_block
+  */
   Status s = file->Read(size - Footer::kEncodedLength, Footer::kEncodedLength,
                         &footer_input, footer_space);
   if (!s.ok()) return s;
@@ -53,8 +61,7 @@ Status Table::Open(const Options& options,
   Footer footer;
   s = footer.DecodeFrom(&footer_input);
   if (!s.ok()) return s;
-//获取data index block
-  // Read the index block
+
   BlockContents contents;
   Block* index_block = NULL;
   if (s.ok()) {
@@ -62,6 +69,9 @@ Status Table::Open(const Options& options,
     if (options.paranoid_checks) {
       opt.verify_checksums = true;
     }
+	/*
+	* 2 读取 data_index_block 内容
+	*/
     s = ReadBlock(file, opt, footer.index_handle(), &contents);
     if (s.ok()) {
       index_block = new Block(contents);
@@ -161,6 +171,7 @@ static void ReleaseBlock(void* arg, void* h) {
 
 // Convert an index iterator value (i.e., an encoded BlockHandle)
 // into an iterator over the contents of the corresponding block.
+//根据data_index_block读取data_block
 Iterator* Table::BlockReader(void* arg,
                              const ReadOptions& options,
                              const Slice& index_value) {
@@ -186,6 +197,7 @@ Iterator* Table::BlockReader(void* arg,
       if (cache_handle != NULL) {
         block = reinterpret_cast<Block*>(block_cache->Value(cache_handle));
       } else {
+      //缓存block
         s = ReadBlock(table->rep_->file, options, handle, &contents);
         if (s.ok()) {
           block = new Block(contents);
@@ -227,6 +239,9 @@ Status Table::InternalGet(const ReadOptions& options, const Slice& k,
                           void* arg,
                           void (*saver)(void*, const Slice&, const Slice&)) {
   Status s;
+  /*
+  * 1 根据data_index_block找到data_block
+  */
   Iterator* iiter = rep_->index_block->NewIterator(rep_->options.comparator);
   iiter->Seek(k);
   if (iiter->Valid()) {
@@ -238,6 +253,9 @@ Status Table::InternalGet(const ReadOptions& options, const Slice& k,
         !filter->KeyMayMatch(handle.offset(), k)) {
       // Not found
     } else {
+    /*
+    * 2 从data_block 查找key value
+    */
       Iterator* block_iter = BlockReader(this, options, iiter->value());
       block_iter->Seek(k);
       if (block_iter->Valid()) {

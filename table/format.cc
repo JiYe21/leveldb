@@ -33,7 +33,8 @@ void Footer::EncodeTo(std::string* dst) const {
   const size_t original_size = dst->size();
   metaindex_handle_.EncodeTo(dst);
   index_handle_.EncodeTo(dst);
-  dst->resize(2 * BlockHandle::kMaxEncodedLength);  // Padding
+  dst->resize(2 * BlockHandle::kMaxEncodedLength);  // Padding//扩大到20字节
+ 
   PutFixed32(dst, static_cast<uint32_t>(kTableMagicNumber & 0xffffffffu));
   PutFixed32(dst, static_cast<uint32_t>(kTableMagicNumber >> 32));
   assert(dst->size() == original_size + kEncodedLength);
@@ -62,6 +63,7 @@ Status Footer::DecodeFrom(Slice* input) {
   return result;
 }
 
+//根据block 偏移量和大小，读取block
 Status ReadBlock(RandomAccessFile* file,
                  const ReadOptions& options,
                  const BlockHandle& handle,

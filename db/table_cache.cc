@@ -10,7 +10,7 @@
 #include "util/coding.h"
 
 namespace leveldb {
-
+//sstable具体信息，以file_number作为key，TableAndFile作为value 缓存
 struct TableAndFile {
   RandomAccessFile* file;
   Table* table;
@@ -42,6 +42,8 @@ TableCache::~TableCache() {
   delete cache_;
 }
 
+//从cache中查找table，没有就创建Table记录插入cache中。
+//此时sstable文件存在磁盘中，cache中没有table记录
 Status TableCache::FindTable(uint64_t file_number, uint64_t file_size,
                              Cache::Handle** handle) {
   Status s;
@@ -88,7 +90,7 @@ Iterator* TableCache::NewIterator(const ReadOptions& options,
   }
 
   Cache::Handle* handle = NULL;
-  Status s = FindTable(file_number, file_size, &handle);
+  Status s = FindTable(file_number, file_size, &handle);//获取table
   if (!s.ok()) {
     return NewErrorIterator(s);
   }

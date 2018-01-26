@@ -17,7 +17,9 @@
 namespace leveldb {
 
 class Env;
-//缓存文件名 ,通过cache_管理数据
+
+//sstable 管理器即table集合，具体缓存在cache_中
+// 与memtable类似，具体数据存在skiplist中
 class TableCache {
  public:
   TableCache(const std::string& dbname, const Options* options, int entries);

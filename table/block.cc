@@ -71,9 +71,10 @@ static inline const char* DecodeEntry(const char* p, const char* limit,
   if (static_cast<uint32_t>(limit - p) < (*non_shared + *value_length)) {
     return NULL;
   }
-  return p;
+  return p;//指向key_not_shared  data起始地址
 }
 
+//用于遍历block里面的record
 class Block::Iter : public Iterator {
  private:
   const Comparator* const comparator_;
@@ -110,7 +111,7 @@ class Block::Iter : public Iterator {
 
     // ParseNextKey() starts at the end of value_, so set value_ accordingly
     uint32_t offset = GetRestartPoint(index);
-    value_ = Slice(data_ + offset, 0);
+    value_ = Slice(data_ + offset, 0);//指向重启点起始地址
   }
 
  public:
@@ -163,19 +164,24 @@ class Block::Iter : public Iterator {
       // Loop until end of current entry hits the start of original entry
     } while (ParseNextKey() && NextEntryOffset() < original);
   }
-//在index block内查找 响应的data block
+  
+//在data/index block内查找 target
   virtual void Seek(const Slice& target) {
     // Binary search in restart array to find the last restart point
     // with a key < target
     uint32_t left = 0;
     uint32_t right = num_restarts_ - 1;
+	/* 1 找重启点  找到所有重启点中最后一个重启点首元素小于target的重启点。
+	* 因为元素依次递增
+	*/
     while (left < right) {
       uint32_t mid = (left + right + 1) / 2;
-      uint32_t region_offset = GetRestartPoint(mid);
+      uint32_t region_offset = GetRestartPoint(mid);//获取中间重启点偏移量
       uint32_t shared, non_shared, value_length;
       const char* key_ptr = DecodeEntry(data_ + region_offset, 
                                         data_ + restarts_,
                                         &shared, &non_shared, &value_length);
+	  //指向重启点首元素，所以shared==0
       if (key_ptr == NULL || (shared != 0)) {
         CorruptionError();
         return;
@@ -193,11 +199,15 @@ class Block::Iter : public Iterator {
     }
 
     // Linear search (within restart block) for first key >= target
+    /*
+    *  2 从block_restart_interval内寻找第一个大于target的key 
+    */
     SeekToRestartPoint(left);
     while (true) {
       if (!ParseNextKey()) {
         return;
       }
+	  //对于data_index_block，在block_restart_interval内找到的是第一个大于taget 的 last_key，也是data_block最大key
       if (Compare(key_, target) >= 0) {
         return;
       }
@@ -224,9 +234,9 @@ class Block::Iter : public Iterator {
     key_.clear();
     value_.clear();
   }
-
+//从block_restart_interval内解析
   bool ParseNextKey() {
-    current_ = NextEntryOffset();
+    current_ = NextEntryOffset();//当前解析的起始点
     const char* p = data_ + current_;
     const char* limit = data_ + restarts_;  // Restarts come right after data
     if (p >= limit) {

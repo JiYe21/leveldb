@@ -13,7 +13,7 @@
 #include "leveldb/iterator.h"
 
 namespace leveldb {
-//从memtable中构建ldb文件，当memtable中数据超过4m,将数据保存至文件中
+//从memtable中构建sstable,并将sstable信息保存至cache
 Status BuildTable(const std::string& dbname,
                   Env* env,
                   const Options& options,
@@ -34,7 +34,9 @@ Status BuildTable(const std::string& dbname,
 
     TableBuilder* builder = new TableBuilder(options, file);
     meta->smallest.DecodeFrom(iter->key());
-	//从memtable中获取key value写入sstable中
+	/*
+	* 1 从memtable中获取key value写入sstable中
+	*/
     for (; iter->Valid(); iter->Next()) {
       Slice key = iter->key();
       meta->largest.DecodeFrom(key);
@@ -62,7 +64,9 @@ Status BuildTable(const std::string& dbname,
     }
     delete file;
     file = NULL;
-
+/*
+* 2 sstable信息保存到cache中
+*/
     if (s.ok()) {
       // Verify that the table is usable
       Iterator* it = table_cache->NewIterator(ReadOptions(),

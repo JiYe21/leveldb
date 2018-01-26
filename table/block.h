@@ -27,8 +27,8 @@ class Block {
  private:
   uint32_t NumRestarts() const;
 
-  const char* data_;
-  size_t size_;
+  const char* data_;//指向block
+  size_t size_;//block大小
   uint32_t restart_offset_;     // Offset in data_ of restart array 
   bool owned_;                  // Block owns data_[]
 
