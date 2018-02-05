@@ -1384,7 +1384,7 @@ Status DBImpl::MakeRoomForWrite(bool force) {
                (mem_->ApproximateMemoryUsage() <= options_.write_buffer_size)) { //当memtable 占用内存小于一定值(4mb),不用
       // There is room in current memtable
       break;
-    } else if (imm_ != NULL) {
+    } else if (imm_ != NULL) { //当前memtable超过阈值，并且imm不为空，说明有一个线程在压缩memtable
       // We have filled up the current memtable, but the previous
       // one is still being compacted, so we wait.
       Log(options_.info_log, "Current memtable full; waiting...\n");

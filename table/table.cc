@@ -98,6 +98,7 @@ Status Table::Open(const Options& options,
   return s;
 }
 
+//
 void Table::ReadMeta(const Footer& footer) {
   if (rep_->options.filter_policy == NULL) {
     return;  // Do not need any metadata
@@ -243,14 +244,15 @@ Status Table::InternalGet(const ReadOptions& options, const Slice& k,
   * 1 根据data_index_block找到data_block
   */
   Iterator* iiter = rep_->index_block->NewIterator(rep_->options.comparator);
-  iiter->Seek(k);
+  iiter->Seek(k);//返回的value是blockhandler 记录data_block大小和偏移
   if (iiter->Valid()) {
     Slice handle_value = iiter->value();
     FilterBlockReader* filter = rep_->filter;
     BlockHandle handle;
+	//优先通过filter查找 data_block中key-value
     if (filter != NULL &&
         handle.DecodeFrom(&handle_value).ok() &&
-        !filter->KeyMayMatch(handle.offset(), k)) {
+        !filter->KeyMayMatch(handle.offset(), k)) {//通过filter查找，如果返回为false ，就一定不存在，如果为真，可能存在，所以就通过data_block查找，能提高不存在的key查找效率
       // Not found
     } else {
     /*

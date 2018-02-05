@@ -26,6 +26,8 @@ class FilterPolicy;
 //
 // The sequence of calls to FilterBlockBuilder must match the regexp:
 //      (StartBlock AddKey*)* Finish
+
+//构建filterblock
 class FilterBlockBuilder {
  public:
   explicit FilterBlockBuilder(const FilterPolicy*);
@@ -38,17 +40,18 @@ class FilterBlockBuilder {
   void GenerateFilter();
 
   const FilterPolicy* policy_;
-  std::string keys_;              // Flattened key contents
-  std::vector<size_t> start_;     // Starting index in keys_ of each key
-  std::string result_;            // Filter data computed so far
+  std::string keys_;              // Flattened key contents //存放所有key
+  std::vector<size_t> start_;     // Starting index in keys_ of each key  //记录key的起点  相比vector<string>效率高
+  std::string result_;            // Filter data computed so far  //记录所有filter
   std::vector<Slice> tmp_keys_;   // policy_->CreateFilter() argument
-  std::vector<uint32_t> filter_offsets_;
+  std::vector<uint32_t> filter_offsets_;   //记录每个filter偏移量
 
   // No copying allowed
   FilterBlockBuilder(const FilterBlockBuilder&);
   void operator=(const FilterBlockBuilder&);
 };
 
+//读取filterblock
 class FilterBlockReader {
  public:
  // REQUIRES: "contents" and *policy must stay live while *this is live.
@@ -58,8 +61,8 @@ class FilterBlockReader {
  private:
   const FilterPolicy* policy_;
   const char* data_;    // Pointer to filter data (at block-start)
-  const char* offset_;  // Pointer to beginning of offset array (at block-end)
-  size_t num_;          // Number of entries in offset array
+  const char* offset_;  // Pointer to beginning of offset array (at block-end)// filter_offsets_ array起始地址
+  size_t num_;          // Number of entries in offset array  //filter_offsets_ 数量
   size_t base_lg_;      // Encoding parameter (see kFilterBaseLg in .cc file)
 };
 

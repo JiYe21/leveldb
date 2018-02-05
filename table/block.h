@@ -13,7 +13,7 @@ namespace leveldb {
 
 struct BlockContents;
 class Comparator;
-
+//用于解析BlockBuilder构建的数据  data_block data_index_block  meta_index_block
 class Block {
  public:
   // Initialize the block with the specified contents.

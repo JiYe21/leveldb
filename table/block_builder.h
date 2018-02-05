@@ -42,8 +42,8 @@ class BlockBuilder {
  private:
   const Options*        options_;
   std::string           buffer_;      // Destination buffer
-  std::vector<uint32_t> restarts_;    // Restart points
-  int                   counter_;     // Number of entries emitted since restart
+  std::vector<uint32_t> restarts_;    // Restart points  //记录重启点起始地址
+  int                   counter_;     // Number of entries emitted since restart  //key-value 数
   bool                  finished_;    // Has Finish() been called?
   std::string           last_key_;
 

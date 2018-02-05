@@ -104,7 +104,7 @@ void TableBuilder::Add(const Slice& key, const Slice& value) {
   if (r->num_entries > 0) {
     assert(r->options.comparator->Compare(key, Slice(r->last_key)) > 0);
   }
-//当有一个block已经写入sstbale
+//当有一个block已经写入sstbale，记录block偏移和大小
   if (r->pending_index_entry) {
     assert(r->data_block.empty());
     r->options.comparator->FindShortestSeparator(&r->last_key, key);
@@ -229,7 +229,7 @@ Status TableBuilder::Finish() {
       key.append(r->options.filter_policy->Name());
       std::string handle_encoding;
       filter_block_handle.EncodeTo(&handle_encoding);
-      meta_index_block.Add(key, handle_encoding);
+      meta_index_block.Add(key, handle_encoding); //记录filter 大小和偏移
     }
 
     // TODO(postrelease): Add stats and other meta blocks
