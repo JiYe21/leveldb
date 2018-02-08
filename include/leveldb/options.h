@@ -175,7 +175,7 @@ struct ReadOptions {
   // not have been released).  If "snapshot" is NULL, use an implicit
   // snapshot of the state at the beginning of this read operation.
   // Default: NULL
-  const Snapshot* snapshot;
+  const Snapshot* snapshot;//读取key-value的时候指定seqnumber
 
   ReadOptions()
       : verify_checksums(false),

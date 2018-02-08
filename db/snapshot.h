@@ -40,7 +40,8 @@ class SnapshotList {
   bool empty() const { return list_.next_ == &list_; }
   SnapshotImpl* oldest() const { assert(!empty()); return list_.next_; }
   SnapshotImpl* newest() const { assert(!empty()); return list_.prev_; }
-
+  
+//Ìí¼ÓÒ»¸ösnapshot
   const SnapshotImpl* New(SequenceNumber seq) {
     SnapshotImpl* s = new SnapshotImpl;
     s->number_ = seq;

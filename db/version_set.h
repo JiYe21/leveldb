@@ -370,8 +370,8 @@ class Compaction {
 
   Compaction(const Options* options, int level);
 
-  int level_;
-  uint64_t max_output_file_size_;
+  int level_;//当前压缩level
+  uint64_t max_output_file_size_;//压缩后形成的sstable文件最大值
   Version* input_version_;//当前正在压缩的版本
   VersionEdit edit_;
 

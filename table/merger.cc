@@ -31,7 +31,7 @@ class MergingIterator : public Iterator {
   virtual bool Valid() const {
     return (current_ != NULL);
   }
-
+//将n个不同迭代器指向first元素，compaction时 就是level 和level+1层 文件迭代器。
   virtual void SeekToFirst() {
     for (int i = 0; i < n_; i++) {
       children_[i].SeekToFirst();
@@ -140,7 +140,7 @@ class MergingIterator : public Iterator {
   // For now we use a simple array since we expect a very small number
   // of children in leveldb.
   const Comparator* comparator_;
-  IteratorWrapper* children_;
+  IteratorWrapper* children_;//n个不同迭代器
   int n_;
   IteratorWrapper* current_;
 

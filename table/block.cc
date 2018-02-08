@@ -79,12 +79,12 @@ class Block::Iter : public Iterator {
  private:
   const Comparator* const comparator_;
   const char* const data_;      // underlying block contents
-  uint32_t const restarts_;     // Offset of restart array (list of fixed32)
+  uint32_t const restarts_;     // Offset of restart array (list of fixed32) //restart array offset
   uint32_t const num_restarts_; // Number of uint32_t entries in restart array
 
   // current_ is offset in data_ of current entry.  >= restarts_ if !Valid
-  uint32_t current_;
-  uint32_t restart_index_;  // Index of restart block in which current_ falls
+  uint32_t current_; //当前正在解析的key-value offset
+  uint32_t restart_index_;  // Index of restart block in which current_ falls //当前遍历的data,属于哪个重启点index
   std::string key_;
   Slice value_;
   Status status_;
@@ -94,6 +94,9 @@ class Block::Iter : public Iterator {
   }
 
   // Return the offset in data_ just past the end of the current entry.
+  //  record1 shared key length | not shared key length| value length |key1 data |value1 data
+  //  record2 shared key length | not shared key length| value length |key2 data |value2 data 
+  // value_ 为value1 data,所以返回的是record2 的offset
   inline uint32_t NextEntryOffset() const {
     return (value_.data() + value_.size()) - data_;
   }
@@ -148,6 +151,7 @@ class Block::Iter : public Iterator {
     assert(Valid());
 
     // Scan backwards to a restart point before current_
+    //找到current_所属restarts
     const uint32_t original = current_;
     while (GetRestartPoint(restart_index_) >= original) {
       if (restart_index_ == 0) {
@@ -158,7 +162,7 @@ class Block::Iter : public Iterator {
       }
       restart_index_--;
     }
-
+//调整current_所属restarts 起始位置，依次遍历到某个record下条record 偏移为original
     SeekToRestartPoint(restart_index_);
     do {
       // Loop until end of current entry hits the start of original entry
@@ -234,10 +238,10 @@ class Block::Iter : public Iterator {
     key_.clear();
     value_.clear();
   }
-//从block_restart_interval内解析
+//从block_restart_interval内解析 根据上一个key-value解析下一个key-value
   bool ParseNextKey() {
-    current_ = NextEntryOffset();//当前解析的起始点
-    const char* p = data_ + current_;
+    current_ = NextEntryOffset();//当前解析的偏移量
+    const char* p = data_ + current_;//当前解析record(起始点)
     const char* limit = data_ + restarts_;  // Restarts come right after data
     if (p >= limit) {
       // No more entries to return.  Mark as invalid.
@@ -258,7 +262,7 @@ class Block::Iter : public Iterator {
       value_ = Slice(p + non_shared, value_length);
       while (restart_index_ + 1 < num_restarts_ &&
              GetRestartPoint(restart_index_ + 1) < current_) {
-        ++restart_index_;
+        ++restart_index_;//根据当前解析的record位置(current_)，调整restart_index_ 
       }
       return true;
     }

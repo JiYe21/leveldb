@@ -107,6 +107,7 @@ void TableBuilder::Add(const Slice& key, const Slice& value) {
 //当有一个block已经写入sstbale，记录block偏移和大小
   if (r->pending_index_entry) {
     assert(r->data_block.empty());
+	//寻找分开两个block的key
     r->options.comparator->FindShortestSeparator(&r->last_key, key);
     std::string handle_encoding;
     r->pending_handle.EncodeTo(&handle_encoding);
@@ -123,7 +124,7 @@ void TableBuilder::Add(const Slice& key, const Slice& value) {
   r->data_block.Add(key, value);
 
   const size_t estimated_block_size = r->data_block.CurrentSizeEstimate();
-  if (estimated_block_size >= r->options.block_size) {//当data_block 大小超过options.block_size(4k)则写入ldb文件，文件结构为(data+type+crc)
+  if (estimated_block_size >= r->options.block_size) {//当data_block 大小超过options.block_size(4k)则写入sstable文件，文件结构为(data+type+crc)
     Flush();
   }
 }
@@ -186,10 +187,11 @@ void TableBuilder::WriteRawBlock(const Slice& block_contents,
                                  CompressionType type,
                                  BlockHandle* handle) {
   Rep* r = rep_;
-  handle->set_offset(r->offset);
-  handle->set_size(block_contents.size());
+  handle->set_offset(r->offset);//记录block偏移量
+  handle->set_size(block_contents.size());//记录block 大小
   r->status = r->file->Append(block_contents);
   if (r->status.ok()) {
+  	//添加type和crc32
     char trailer[kBlockTrailerSize];
     trailer[0] = type;
     uint32_t crc = crc32c::Value(block_contents.data(), block_contents.size());

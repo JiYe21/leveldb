@@ -117,6 +117,7 @@ static bool BeforeFile(const Comparator* ucmp,
   return (user_key != NULL &&
           ucmp->Compare(*user_key, f->smallest.user_key()) < 0);
 }
+
 //检测是files中是否有smallest~largest区间的key
 bool SomeFileOverlapsRange(
     const InternalKeyComparator& icmp,
@@ -125,12 +126,13 @@ bool SomeFileOverlapsRange(
     const Slice* smallest_user_key,
     const Slice* largest_user_key) {
   const Comparator* ucmp = icmp.user_comparator();
+  //第0层 通过遍历检测
   if (!disjoint_sorted_files) {
     // Need to check against all files
     for (size_t i = 0; i < files.size(); i++) {
       const FileMetaData* f = files[i];
-      if (AfterFile(ucmp, smallest_user_key, f) ||
-          BeforeFile(ucmp, largest_user_key, f)) {
+      if (AfterFile(ucmp, smallest_user_key, f) ||//最小的key比文件中最大的key还大
+          BeforeFile(ucmp, largest_user_key, f)) {//最大的key比文件中最小的key还小
         // No overlap
       } else {
         return true;  // Overlap
@@ -138,6 +140,7 @@ bool SomeFileOverlapsRange(
     }
     return false;
   }
+   //>0层通过二分检测
 
   // Binary search over file list
   uint32_t index = 0;
@@ -506,18 +509,27 @@ bool Version::OverlapInLevel(int level,
   return SomeFileOverlapsRange(vset_->icmp_, (level > 0), files_[level],
                                smallest_user_key, largest_user_key);
 }
-//选择smallest~largest 所属level
+//为memtable压缩后的sstable 选择 level
+// 1 如果[smallest,largest)与0层有重叠，就选择0层
+// 2 如果与level+1层有重叠就选择level层
+// 2 如果与level+2层重叠的文件比较多就选择level层
 int Version::PickLevelForMemTableOutput(
     const Slice& smallest_user_key,
     const Slice& largest_user_key) {
   int level = 0;
+  /*
+  * 检测第0层
+  */
   if (!OverlapInLevel(0, &smallest_user_key, &largest_user_key)) {
     // Push to next level if there is no overlap in next level,
     // and the #bytes overlapping in the level after that are limited.
     InternalKey start(smallest_user_key, kMaxSequenceNumber, kValueTypeForSeek);
     InternalKey limit(largest_user_key, 0, static_cast<ValueType>(0));
-    std::vector<FileMetaData*> overlaps;
+    std::vector<FileMetaData*> overlaps
     while (level < config::kMaxMemCompactLevel) {
+		/*
+		* 0层没有重叠元素，检测下一层
+		*/
       if (OverlapInLevel(level + 1, &smallest_user_key, &largest_user_key)) {
         break;
       }
@@ -566,6 +578,7 @@ void Version::GetOverlappingInputs(
       if (level == 0) {
         // Level-0 files may overlap each other.  So check if the newly
         // added file has expanded the range.  If so, restart search.
+        //level-0 文件，不同文件之间可能有重叠，将互相重叠的都选出来
         if (begin != NULL && user_cmp->Compare(file_start, user_begin) < 0) {
           user_begin = file_start;
           inputs->clear();
@@ -611,6 +624,7 @@ std::string Version::DebugString() const {
 // Versions that contain full copies of the intermediate state.
 
 //根据当前版本base_和compaction后 的VersionEdit 构建新的version
+
 // 版本version构建辅助类
 class VersionSet::Builder {
  private:
@@ -632,8 +646,8 @@ class VersionSet::Builder {
 
   typedef std::set<FileMetaData*, BySmallestKey> FileSet;//设置一个比较器
   struct LevelState {
-    std::set<uint64_t> deleted_files;//每层待删除文件
-    FileSet* added_files;//每层保留文件
+    std::set<uint64_t> deleted_files;//每层待删除sstable文件
+    FileSet* added_files;//每层新增的sstable
   };
 
   VersionSet* vset_;
@@ -675,7 +689,7 @@ class VersionSet::Builder {
   }
 
   // Apply all of the edits in *edit to the current state.
-  // 根据 VersionEdit 构建levels_，记录新添加的ssttable文件信息
+  // 记录应该增减的sstable文件
   void Apply(VersionEdit* edit) {
     // Update compaction pointers
     for (size_t i = 0; i < edit->compact_pointers_.size(); i++) {
@@ -724,7 +738,7 @@ class VersionSet::Builder {
 
   // Save the current state in *v.
   //构建version接口 
-  // 根据已有的版本base_和 Apply中新增加的文件 构建新版本v 
+  // 根据已有的版本 sstable文件和 应该增减的sstable文件 合并为新的sstable文件
   void SaveTo(Version* v) {
     BySmallestKey cmp;
     cmp.internal_comparator = &vset_->icmp_;
@@ -739,6 +753,7 @@ class VersionSet::Builder {
 
 	  /* 
 	  *  1 v中files_每层文件是按照 smallest internal_key升序排序
+	  *  2 v中files_ >0层的文件 满足index(largest)<index+1(smallest)
 	  */
       for (FileSet::const_iterator added_iter = added->begin();
            added_iter != added->end();
@@ -764,6 +779,7 @@ class VersionSet::Builder {
 
 #ifndef NDEBUG
       // Make sure there is no overlap in levels > 0
+      //检测对于level>0，确保index(largest)<index+1(smallest) 
       if (level > 0) {
         for (uint32_t i = 1; i < v->files_[level].size(); i++) {
           const InternalKey& prev_end = v->files_[level][i-1]->largest;
@@ -781,12 +797,13 @@ class VersionSet::Builder {
   }
 
   void MaybeAddFile(Version* v, int level, FileMetaData* f) {
+  	//排除需要删除的sstable，比如sstable经过压缩，被压缩的sstable文件需要删除
     if (levels_[level].deleted_files.count(f->number) > 0) {
       // File is deleted: do nothing
     } else {
       std::vector<FileMetaData*>* files = &v->files_[level];
       if (level > 0 && !files->empty()) {
-        // Must not overlap
+        // Must not overlap //
         assert(vset_->icmp_.Compare((*files)[files->size()-1]->largest,
                                     f->smallest) < 0);
       }
@@ -1328,6 +1345,7 @@ Iterator* VersionSet::MakeInputIterator(Compaction* c) {
   delete[] list;
   return result;
 }
+
 //选择要压缩的文件
 Compaction* VersionSet::PickCompaction() {
   Compaction* c;
@@ -1345,7 +1363,7 @@ Compaction* VersionSet::PickCompaction() {
 
     // Pick the first file that comes after compact_pointer_[level]
     /*
-     * 1 获取level一个压缩文件
+     * 1 获取level 待压缩的文件
     */
     for (size_t i = 0; i < current_->files_[level].size(); i++) {
       FileMetaData* f = current_->files_[level][i];
@@ -1388,7 +1406,7 @@ Compaction* VersionSet::PickCompaction() {
 
   return c;
 }
-//获取level和level+1 压缩的文件
+//获取level+1 压缩的文件
 void VersionSet::SetupOtherInputs(Compaction* c) {
   const int level = c->level();
   InternalKey smallest, largest;
@@ -1400,7 +1418,7 @@ void VersionSet::SetupOtherInputs(Compaction* c) {
   // Get entire range covered by compaction
   InternalKey all_start, all_limit;
   
-  //获取一个区间包含inputs中所有ssttable文件key
+  
   
   GetRange2(c->inputs_[0], c->inputs_[1], &all_start, &all_limit);
 
@@ -1524,7 +1542,7 @@ bool Compaction::IsTrivialMove() const {
           TotalFileSize(grandparents_) <=
               MaxGrandParentOverlapBytes(vset->options_));
 }
-
+//向edit添加压缩过程被删除的sstable文件
 void Compaction::AddInputDeletions(VersionEdit* edit) {
   for (int which = 0; which < 2; which++) {
     for (size_t i = 0; i < inputs_[which].size(); i++) {
