@@ -83,6 +83,7 @@ Version::~Version() {
   }
 }
 
+//找到一个最小的largest>key 作为sstable。file_[index]中每层文件按照internal_key由小到大排列
 int FindFile(const InternalKeyComparator& icmp,
              const std::vector<FileMetaData*>& files,
              const Slice& key) {
@@ -355,6 +356,9 @@ Status Version::Get(const ReadOptions& options,
   // in an smaller level, later levels are irrelevant.
   std::vector<FileMetaData*> tmp;
   FileMetaData* tmp2;
+  /*
+  *  查找key可能存在的sstable文件，并从sstable中查找key 验证
+  */
   for (int level = 0; level < config::kNumLevels; level++) {
     size_t num_files = files_[level].size();
     if (num_files == 0) continue;
@@ -362,7 +366,7 @@ Status Version::Get(const ReadOptions& options,
     // Get the list of files to search in this level
     FileMetaData* const* files = &files_[level][0];
     if (level == 0) {
-		//level0中可能多个文件中含有同一user_key,将文件序号降序排列
+		//level-0中可能多个文件满足 smallest.user_key<user_key<largest.user_key,将这些文件选出,将文件序号降序排列,因为最近写入的key-value 文件号大
       // Level-0 files may overlap each other.  Find all files that
       // overlap user_key and process them in order from newest to oldest.
       tmp.reserve(num_files);
@@ -382,7 +386,7 @@ Status Version::Get(const ReadOptions& options,
     } else {
       // Binary search to find earliest index whose largest key >= ikey.
       
-      //查找largest internal_key>=ikey的最小文件号
+      //查找最小的largest>=ikey
       uint32_t index = FindFile(vset_->icmp_, files_[level], ikey);
       if (index >= num_files) {
         files = NULL;

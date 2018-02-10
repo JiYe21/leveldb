@@ -111,7 +111,7 @@ void TableBuilder::Add(const Slice& key, const Slice& value) {
     r->options.comparator->FindShortestSeparator(&r->last_key, key);
     std::string handle_encoding;
     r->pending_handle.EncodeTo(&handle_encoding);
-    r->index_block.Add(r->last_key, Slice(handle_encoding));//记录last_key 和offset size,用与构建index_block
+    r->index_block.Add(r->last_key, Slice(handle_encoding));//以上一个data_block 最大key作为last_key,data_block偏移和size 为value,用于构建index_block
     r->pending_index_entry = false;
   }
 
