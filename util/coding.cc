@@ -6,6 +6,7 @@
 
 namespace leveldb {
 
+//默认采用小端字节序存储数字
 void EncodeFixed32(char* buf, uint32_t value) {
   if (port::kLittleEndian) {
     memcpy(buf, &value, sizeof(value));

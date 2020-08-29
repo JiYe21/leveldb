@@ -1243,6 +1243,17 @@ Status DBImpl::Delete(const WriteOptions& options, const Slice& key) {
 */
 // 1 将队列中batch合并 一次写入log文件
 //  2 写入memtable
+/*
+	
+    thread1    
+    
+    thread2
+    ....         writers_  ----->  | ......................|.............|
+    threadn                       first_writer            last_writer    
+
+    first_writer 线程合并batch，直到last_writer. 下次由last_writer+1 线程合并
+
+*/
 Status DBImpl::Write(const WriteOptions& options, WriteBatch* my_batch) {
   Writer w(&mutex_);
   w.batch = my_batch;
